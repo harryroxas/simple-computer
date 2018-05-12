@@ -1,12 +1,16 @@
 LIBRARY IEEE,STD;
 
+use IEEE.numeric_std.all;
+use ieee.std_logic_unsigned.all;
 USE IEEE.STD_LOGIC_1164.ALL;
 USE IEEE.STD_LOGIC_TEXTIO.ALL;
 USE STD.TEXTIO.ALL;
 
 ENTITY computer IS
   port (
-    clock_cycle_out : out STD_LOGIC;
+    clock_cycle_out : out STD_LOGIC_VECTOR(3 downto 0) := (others => '0');
+    stage : out STD_LOGIC_VECTOR(4 downto 0) := (others => '0');
+    pc_out : out STD_LOGIC_VECTOR(3 downto 0) := (others => '0')
   );
 END computer;
 
@@ -50,36 +54,46 @@ ARCHITECTURE behaviorial OF computer IS
 
       WHILE inst /= count LOOP
         clock_cycle := clock_cycle + 1;
+        clock_cycle_out <= STD_LOGIC_VECTOR(to_unsigned(clock_cycle, 4));
 
         IF memoried(inst) = '1' THEN
           writebacked(inst) := '1';
+          stage(0) <= '1';
 
           inst := inst + 1;
         END IF;
 
         IF executed(MEMORY) = '1' THEN
           memoried(MEMORY) := '1';
+          stage(1) <= '1';
 
           MEMORY := MEMORY + 1;
         END IF;
 
         IF decoded(EXECUTE) = '1' THEN
           executed(EXECUTE) := '1';
+          stage(2) <= '1';
 
           EXECUTE := EXECUTE + 1;
         END IF;
 
         IF fetched(DECODE) = '1' THEN
-          decode(DECODE) := '1';
+          decoded(DECODE) := '1';
+          stage(3) <= '1';
 
           DECODE := DECODE + 1;
         END IF;
 
         IF PC < count THEN
           fetched(PC) := '1';
+          stage(4) <= '1';
 
           PC := PC + 1;
         END IF;
+
+        pc_out <= STD_LOGIC_VECTOR(to_unsigned(PC, 4));
+
+        wait for 10 ns;
 
       END LOOP;
 
