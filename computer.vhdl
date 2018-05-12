@@ -34,6 +34,7 @@ ARCHITECTURE behaviorial OF computer IS
       VARIABLE executed : STD_LOGIC_VECTOR(14 downto 0) := (others => '0');
       VARIABLE memoried : STD_LOGIC_VECTOR(14 downto 0) := (others => '0');
       VARIABLE writebacked : STD_LOGIC_VECTOR(14 downto 0) := (others => '0');
+      VARIABLE stalled : STD_LOGIC_VECTOR(4 downto 0) := (others => '0');
 
       VARIABLE PC : INTEGER := 0;
       VARIABLE DECODE : INTEGER := 0;
@@ -92,6 +93,10 @@ ARCHITECTURE behaviorial OF computer IS
         END IF;
 
         pc_out <= STD_LOGIC_VECTOR(to_unsigned(PC, 4));
+
+        wait for 10 ns;
+
+        stage <= stalled;
 
         wait for 10 ns;
 
