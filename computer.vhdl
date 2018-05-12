@@ -16,13 +16,23 @@ END computer;
 
 ARCHITECTURE behaviorial OF computer IS
   type INSTRUCTION is array(14 downto 0) of STD_LOGIC_VECTOR(20 downto 0);
-
+  type OPERATION is array(14 downto 0) of STD_LOGIC_VECTOR(2 downto 0);
+  type DESTINATION is array(14 downto 0) of STD_LOGIC_VECTOR(5 downto 0);
+  type SOURCE1 is array(14 downto 0) of STD_LOGIC_VECTOR(5 downto 0);
+  type SOURCE2 is array(14 downto 0) of STD_LOGIC_VECTOR(5 downto 0);
+  type VALUE is array(31 downto 0) of INTEGER;
   BEGIN
     PROCESS
       FILE in_file : TEXT OPEN READ_MODE IS "input/1.txt";
       VARIABLE in_line : LINE;
       VARIABLE count : INTEGER := 0;
       VARIABLE instructions : INSTRUCTION;
+      VARIABLE operations : OPERATION;
+      VARIABLE destinations : DESTINATION;
+      VARIABLE sources1 : SOURCE1;
+      VARIABLE sources2 : SOURCE2;
+      VARIABLE values : VALUE;
+      VARIABLE registers : STD_LOGIC_VECTOR(31 downto 0);
 
       VARIABLE opcode : STD_LOGIC_VECTOR(20 downto 0);
 
@@ -35,12 +45,22 @@ ARCHITECTURE behaviorial OF computer IS
       VARIABLE memoried : STD_LOGIC_VECTOR(14 downto 0) := (others => '0');
       VARIABLE writebacked : STD_LOGIC_VECTOR(14 downto 0) := (others => '0');
       VARIABLE stalled : STD_LOGIC_VECTOR(4 downto 0) := (others => '0');
+      VARIABLE reading : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
+      VARIABLE writing : STD_LOGIC_VECTOR(31 downto 0) := (others => '0');
+
+      VARIABLE value1 : INTEGER;
+      VARIABLE value2 : INTEGER;
+      VARIABLE all_done : STD_LOGIC;
+      VARIABLE no_hazard : STD_LOGIC;
+      VARIABLE always_true : STD_LOGIC := '1';
+      VARIABLE dest : STD_LOGIC_VECTOR(4 downto 0);
 
       VARIABLE PC : INTEGER := 0;
-      VARIABLE DECODE : INTEGER := 0;
-      VARIABLE EXECUTE : INTEGER := 0;
-      VARIABLE MEMORY : INTEGER := 0;
-      VARIABLE WRITEBACK : INTEGER := 0;
+      VARIABLE FETCH : STD_LOGIC := '0';
+      VARIABLE DECODE : STD_LOGIC := '0';
+      VARIABLE EXECUTE : STD_LOGIC := '0';
+      VARIABLE MEMORY : STD_LOGIC := '0';
+      VARIABLE WRITEBACK : STD_LOGIC := '0';
 
     BEGIN
 
@@ -53,54 +73,153 @@ ARCHITECTURE behaviorial OF computer IS
       count := count + 1;
       END LOOP;
 
-      WHILE inst /= count LOOP
+      L1: WHILE always_true = '1' LOOP
+        all_done := '1';
+
+        FOR i IN 0 TO count-1 LOOP
+          IF writebacked(i) = '0' THEN
+            all_done := '0';
+          END IF;
+        END LOOP;
+        EXIT L1 WHEN all_done = '1';
+
         clock_cycle := clock_cycle + 1;
         clock_cycle_out <= STD_LOGIC_VECTOR(to_unsigned(clock_cycle, 4));
 
-        IF memoried(inst) = '1' AND writebacked(inst) = '0' THEN
-          writebacked(inst) := '1';
-          stage(0) <= '1';
+        FOR i IN 0 TO count-1 LOOP
+          IF writebacked(i) = '1' AND WRITEBACK = '1' THEN
+            WRITEBACK := '0';
+            writing(to_integer(unsigned(destinations(i)(4 downto 0)))) := '0';
+            reading(to_integer(unsigned(sources1(i)(4 downto 0)))) := '0';
+            IF to_integer(unsigned(operations(i))) /= 0 THEN
+              reading(to_integer(unsigned(sources2(i)(4 downto 0)))) := '0';
+            END IF;
+          END IF;
 
-          inst := inst + 1;
-        END IF;
+          IF memoried(i) = '1' AND writebacked(i) = '0' AND WRITEBACK = '0' THEN
+            writebacked(i) := '1';
+            WRITEBACK := '1';
+            MEMORY := '0';
+            stage(0) <= '1';
+          END IF;
 
-        IF executed(MEMORY) = '1' AND memoried(MEMORY) = '0' THEN
-          memoried(MEMORY) := '1';
-          stage(1) <= '1';
+          IF executed(i) = '1' AND memoried(i) = '0' AND MEMORY = '0' THEN
+            memoried(i) := '1';
+            MEMORY := '1';
+            EXECUTE := '0';
+            stage(1) <= '1';
+          END IF;
 
-          MEMORY := MEMORY + 1;
-        END IF;
+          IF decoded(i) = '1' AND executed(i) ='0' AND EXECUTE = '0' THEN
+            executed(i) := '1';
+            EXECUTE := '1';
+            DECODE := '0';
+            stage(2) <= '1';
 
-        IF decoded(EXECUTE) = '1' AND executed(EXECUTE) ='0' THEN
-          executed(EXECUTE) := '1';
-          stage(2) <= '1';
+            IF to_integer(unsigned(operations(i))) = 0 THEN
+              IF sources1(i)(5) = '0' THEN
+                values(to_integer(unsigned(destinations(i)(4 downto 0)))) := values(to_integer(unsigned(sources1(i)(4 downto 0))));
+              ELSE
+                values(to_integer(unsigned(destinations(i)(4 downto 0)))) := to_integer(unsigned(sources1(i)(1 downto 0)));
+              END IF;
+            ELSE
+              IF sources1(i)(5) = '0' THEN
+                value1 := values(to_integer(unsigned(sources1(i)(4 downto 0))));
+              ELSE
+                value1 := to_integer(unsigned(sources1(i)(1 downto 0)));
+              END IF;
 
-          EXECUTE := EXECUTE + 1;
-        END IF;
+              IF sources2(i)(5) = '0' THEN
+                value2 := values(to_integer(unsigned(sources2(i)(4 downto 0))));
+              ELSE
+                value2 := to_integer(unsigned(sources2(i)(1 downto 0)));
+              END IF;
+              IF to_integer(unsigned(operations(i))) = 1 THEN
+                values(to_integer(unsigned(destinations(i)(4 downto 0)))) := value1 + value2;
+              ELSIF to_integer(unsigned(operations(i))) = 2 THEN
+                values(to_integer(unsigned(destinations(i)(4 downto 0)))) := value1 - value2;
+              ELSIF to_integer(unsigned(operations(i))) = 3 THEN
+                values(to_integer(unsigned(destinations(i)(4 downto 0)))) := value1 * value2;
+              ELSIF to_integer(unsigned(operations(i))) = 4 THEN
+                values(to_integer(unsigned(destinations(i)(4 downto 0)))) := value1 / value2;
+              ELSIF to_integer(unsigned(operations(i))) = 5 THEN
+                values(to_integer(unsigned(destinations(i)(4 downto 0)))) := value1 mod value2;
+              END IF;
+            END IF;
+          END IF;
 
-        IF fetched(DECODE) = '1' AND decoded(DECODE) = '0' THEN
-          decoded(DECODE) := '1';
-          stage(3) <= '1';
+          IF fetched(i) = '1' AND decoded(i) = '0' AND DECODE = '0' THEN
+            operations(i) := instructions(i)(20 downto 18);
+            IF to_integer(unsigned(instructions(i)(20 downto 12))) = 0 THEN
+              destinations(i) := instructions(i)(11 downto 6);
+            ELSE
+              destinations(i) := instructions(i)(17 downto 12);
+            END IF;
 
-          DECODE := DECODE + 1;
-        END IF;
+            no_hazard := '1';
 
-        IF PC < count THEN
-          fetched(PC) := '1';
-          stage(4) <= '1';
+            IF writing(to_integer(unsigned(destinations(i)(4 downto 0)))) = '1' OR reading(to_integer(unsigned(destinations(i)(4 downto 0)))) = '1' THEN
+              no_hazard := '0';
+            END IF;
 
-          PC := PC + 1;
-        END IF;
+            IF no_hazard = '1' THEN
+
+              IF to_integer(unsigned(operations(i))) = 0 THEN
+                sources1(i) := instructions(i)(5 downto 0);
+                IF sources1(i)(5) = '0' THEN
+                  IF writing(to_integer(unsigned(sources1(i)(4 downto 0)))) = '1' THEN
+                    no_hazard := '0';
+                  END IF;
+                END IF;
+              ELSE
+                sources1(i) := instructions(i)(11 downto 6);
+                sources2(i) := instructions(i)(5 downto 0);
+                IF sources1(i)(5) = '0' THEN
+                  IF writing(to_integer(unsigned(sources1(i)(4 downto 0)))) = '1' THEN
+                    no_hazard := '0';
+                  END IF;
+                END IF;
+                IF sources2(i)(5) = '0' THEN
+                  IF writing(to_integer(unsigned(sources2(i)(4 downto 0)))) = '1' THEN
+                    no_hazard := '0';
+                  END IF;
+                END IF;
+              END IF;
+ 
+              IF no_hazard = '1' THEN
+                writing(to_integer(unsigned(destinations(i)(4 downto 0)))) := '1';
+
+                decoded(i) := '1';
+                FETCH := '0';
+                DECODE := '1';
+                stage(3) <= '1';
+              END IF;
+            END IF;
+          END IF;
+
+          IF fetched(i) = '1' AND decoded(i) = '0' AND DECODE = '1' THEN
+            stage(4) <= '1';
+            stalled(4) := '1';
+          END IF; 
+
+          IF fetched(i) = '0' AND FETCH = '0' THEN
+            fetched(i) := '1';
+            FETCH := '1';
+            stage(4) <= '1';
+          END IF;
+
+        END LOOP;
+        PC := PC + 1;
 
         pc_out <= STD_LOGIC_VECTOR(to_unsigned(PC, 4));
 
-        wait for 10 ns;
-
+        wait for 1 ns;
         stage <= stalled;
+        wait for 1 ns;
+        stalled := (others => '0');
 
-        wait for 10 ns;
 
-      END LOOP;
+      END LOOP L1;
 
       ASSERT FALSE REPORT "Simulation done" SEVERITY NOTE;
       WAIT; --allows the simulation to halt!
