@@ -19,7 +19,7 @@ ARCHITECTURE behaviorial OF computer IS
 
   BEGIN
     PROCESS
-      FILE in_file : TEXT OPEN READ_MODE IS "in_values.txt";
+      FILE in_file : TEXT OPEN READ_MODE IS "input/1.txt";
       VARIABLE in_line : LINE;
       VARIABLE count : INTEGER := 0;
       VARIABLE instructions : INSTRUCTION;

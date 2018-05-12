@@ -1,0 +1,3 @@
+LOAD R2, 1
+ADD R3, R2, 1
+LOAD R9, 9
