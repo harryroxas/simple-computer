@@ -5,6 +5,9 @@ USE IEEE.STD_LOGIC_TEXTIO.ALL;
 USE STD.TEXTIO.ALL;
 
 ENTITY computer IS
+  port (
+    clock_cycle_out : out STD_LOGIC;
+  );
 END computer;
 
 ARCHITECTURE behaviorial OF computer IS
@@ -12,7 +15,7 @@ ARCHITECTURE behaviorial OF computer IS
 
   BEGIN
     PROCESS
-      FILE in_file : TEXT OPEN READ_MODE IS "in_values";
+      FILE in_file : TEXT OPEN READ_MODE IS "in_values.txt";
       VARIABLE in_line : LINE;
       VARIABLE count : INTEGER := 0;
       VARIABLE instructions : INSTRUCTION;
@@ -20,6 +23,20 @@ ARCHITECTURE behaviorial OF computer IS
       VARIABLE opcode : STD_LOGIC_VECTOR(20 downto 0);
 
       VARIABLE inst : INTEGER := 0;
+      VARIABLE clock_cycle : INTEGER := 0;
+
+      VARIABLE fetched : STD_LOGIC_VECTOR(14 downto 0) := (others => '0');
+      VARIABLE decoded : STD_LOGIC_VECTOR(14 downto 0) := (others => '0');
+      VARIABLE executed : STD_LOGIC_VECTOR(14 downto 0) := (others => '0');
+      VARIABLE memoried : STD_LOGIC_VECTOR(14 downto 0) := (others => '0');
+      VARIABLE writebacked : STD_LOGIC_VECTOR(14 downto 0) := (others => '0');
+
+      VARIABLE PC : INTEGER := 0;
+      VARIABLE DECODE : INTEGER := 0;
+      VARIABLE EXECUTE : INTEGER := 0;
+      VARIABLE MEMORY : INTEGER := 0;
+      VARIABLE WRITEBACK : INTEGER := 0;
+
     BEGIN
 
       WHILE NOT ENDFILE(in_file) LOOP --do this till out of data
@@ -32,8 +49,37 @@ ARCHITECTURE behaviorial OF computer IS
       END LOOP;
 
       WHILE inst /= count LOOP
+        clock_cycle := clock_cycle + 1;
 
-      
+        IF memoried(inst) = '1' THEN
+          writebacked(inst) := '1';
+
+          inst := inst + 1;
+        END IF;
+
+        IF executed(MEMORY) = '1' THEN
+          memoried(MEMORY) := '1';
+
+          MEMORY := MEMORY + 1;
+        END IF;
+
+        IF decoded(EXECUTE) = '1' THEN
+          executed(EXECUTE) := '1';
+
+          EXECUTE := EXECUTE + 1;
+        END IF;
+
+        IF fetched(DECODE) = '1' THEN
+          decode(DECODE) := '1';
+
+          DECODE := DECODE + 1;
+        END IF;
+
+        IF PC < count THEN
+          fetched(PC) := '1';
+
+          PC := PC + 1;
+        END IF;
 
       END LOOP;
 
