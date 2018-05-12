@@ -57,28 +57,28 @@ ARCHITECTURE behaviorial OF computer IS
         clock_cycle := clock_cycle + 1;
         clock_cycle_out <= STD_LOGIC_VECTOR(to_unsigned(clock_cycle, 4));
 
-        IF memoried(inst) = '1' THEN
+        IF memoried(inst) = '1' AND writebacked(inst) = '0' THEN
           writebacked(inst) := '1';
           stage(0) <= '1';
 
           inst := inst + 1;
         END IF;
 
-        IF executed(MEMORY) = '1' THEN
+        IF executed(MEMORY) = '1' AND memoried(MEMORY) = '0' THEN
           memoried(MEMORY) := '1';
           stage(1) <= '1';
 
           MEMORY := MEMORY + 1;
         END IF;
 
-        IF decoded(EXECUTE) = '1' THEN
+        IF decoded(EXECUTE) = '1' AND executed(EXECUTE) ='0' THEN
           executed(EXECUTE) := '1';
           stage(2) <= '1';
 
           EXECUTE := EXECUTE + 1;
         END IF;
 
-        IF fetched(DECODE) = '1' THEN
+        IF fetched(DECODE) = '1' AND decoded(DECODE) = '0' THEN
           decoded(DECODE) := '1';
           stage(3) <= '1';
 
