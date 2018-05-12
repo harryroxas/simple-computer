@@ -2,7 +2,7 @@
 # $ chmod +x run.sh
 # $ ./run.sh
 
-ghdl -a --ieee=synopsys run.vhdl && \
-ghdl -e --ieee=synopsys run && \
-ghdl -r --ieee=synopsys run --vcd=run.vcd && \
-gtkwave run.vcd &
+ghdl -a --ieee=synopsys calculator.vhdl && \
+ghdl -e --ieee=synopsys calculator && \
+ghdl -r --ieee=synopsys calculator --vcd=calculator.vcd && \
+gtkwave calculator.vcd &
