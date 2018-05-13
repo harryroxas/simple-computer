@@ -10,7 +10,8 @@ ENTITY computer IS
   port (
     clock_cycle_out : out STD_LOGIC_VECTOR(3 downto 0) := (others => '0');
     stage : out STD_LOGIC_VECTOR(4 downto 0) := (others => '0');
-    pc_out : out STD_LOGIC_VECTOR(3 downto 0) := (others => '0')
+    pc_out : out STD_LOGIC_VECTOR(3 downto 0) := (others => '0');
+    signals : out STD_LOGIC_VECTOR(3 downto 0) := (others => '0')
   );
 END computer;
 
@@ -89,7 +90,6 @@ ARCHITECTURE behaviorial OF computer IS
         FOR i IN 0 TO count-1 LOOP
           IF writebacked(i) = '1' AND WRITEBACK = '1' THEN
             WRITEBACK := '0';
-            stage(0) <= '0';
             writing(to_integer(unsigned(destinations(i)(4 downto 0)))) := '0';
             reading(to_integer(unsigned(sources1(i)(4 downto 0)))) := '0';
             IF to_integer(unsigned(operations(i))) /= 0 THEN
@@ -97,71 +97,77 @@ ARCHITECTURE behaviorial OF computer IS
             END IF;
           END IF;
 
-          IF memoried(i) = '1' AND writebacked(i) = '0' THEN
-            IF WRITEBACK = '0' THEN
-              writebacked(i) := '1';
-              WRITEBACK := '1';
-              MEMORY := '0';
-              stage(0) <= '1';
-            ELSE
-              stage(1) <= '1';
-              stalled(1) := '1';
-            END IF;
+          IF memoried(i) = '1' AND writebacked(i) = '0' AND WRITEBACK = '0' THEN
+            writebacked(i) := '1';
+            WRITEBACK := '1';
+            MEMORY := '0';
+            stage(0) <= '1';
           END IF;
 
-          IF executed(i) = '1' AND memoried(i) = '0' THEN
-            IF MEMORY = '0' THEN
-              memoried(i) := '1';
-              MEMORY := '1';
-              EXECUTE := '0';
-              stage(1) <= '1';
-            ELSE
-              stage(2) <= '1';
-              stalled(2) := '1';
-            END IF;
+          IF executed(i) = '1' AND memoried(i) = '0' AND MEMORY = '0' THEN
+            memoried(i) := '1';
+            MEMORY := '1';
+            EXECUTE := '0';
+            stage(1) <= '1';
           END IF;
 
-          IF decoded(i) = '1' AND executed(i) ='0' THEN
-            IF EXECUTE = '0' THEN
-              executed(i) := '1';
-              EXECUTE := '1';
-              DECODE := '0';
-              stage(2) <= '1';
+          IF decoded(i) = '1' AND executed(i) ='0' AND EXECUTE = '0' THEN
+            executed(i) := '1';
+            EXECUTE := '1';
+            DECODE := '0';
+            stage(2) <= '1';
 
-              IF to_integer(unsigned(operations(i))) = 0 THEN
-                IF sources1(i)(5) = '0' THEN
-                  values(to_integer(unsigned(destinations(i)(4 downto 0)))) := values(to_integer(unsigned(sources1(i)(4 downto 0))));
-                ELSE
-                  values(to_integer(unsigned(destinations(i)(4 downto 0)))) := to_integer(unsigned(sources1(i)(1 downto 0)));
-                END IF;
+            IF to_integer(unsigned(operations(i))) = 0 THEN
+              IF sources1(i)(5) = '0' THEN
+                values(to_integer(unsigned(destinations(i)(4 downto 0)))) := values(to_integer(unsigned(sources1(i)(4 downto 0))));
               ELSE
-                IF sources1(i)(5) = '0' THEN
-                  value1 := values(to_integer(unsigned(sources1(i)(4 downto 0))));
-                ELSE
-                  value1 := to_integer(unsigned(sources1(i)(1 downto 0)));
-                END IF;
-
-                IF sources2(i)(5) = '0' THEN
-                  value2 := values(to_integer(unsigned(sources2(i)(4 downto 0))));
-                ELSE
-                  value2 := to_integer(unsigned(sources2(i)(1 downto 0)));
-                END IF;
-                IF to_integer(unsigned(operations(i))) = 1 THEN
-                  values(to_integer(unsigned(destinations(i)(4 downto 0)))) := value1 + value2;
-                ELSIF to_integer(unsigned(operations(i))) = 2 THEN
-                  values(to_integer(unsigned(destinations(i)(4 downto 0)))) := value1 - value2;
-                ELSIF to_integer(unsigned(operations(i))) = 3 THEN
-                  values(to_integer(unsigned(destinations(i)(4 downto 0)))) := value1 * value2;
-                ELSIF to_integer(unsigned(operations(i))) = 4 THEN
-                  values(to_integer(unsigned(destinations(i)(4 downto 0)))) := value1 / value2;
-                ELSIF to_integer(unsigned(operations(i))) = 5 THEN
-                  values(to_integer(unsigned(destinations(i)(4 downto 0)))) := value1 mod value2;
-                END IF;
+                values(to_integer(unsigned(destinations(i)(4 downto 0)))) := to_integer(unsigned(sources1(i)(1 downto 0)));
+              END IF;
+              IF values(to_integer(unsigned(destinations(i)(4 downto 0)))) = 0 THEN
+                signals(3) <= '1';
+              ELSIF values(to_integer(unsigned(destinations(i)(4 downto 0)))) > 0 THEN
+                signals(2) <= '1';
+              ELSIF values(to_integer(unsigned(destinations(i)(4 downto 0)))) < -3 THEN
+                signals(1) <= '1';
+              ELSIF values(to_integer(unsigned(destinations(i)(4 downto 0)))) > 3 THEN
+                signals(0) <= '1';
               END IF;
             ELSE
-              stage(3) <= '1';
-              stalled(3) := '1';
+              IF sources1(i)(5) = '0' THEN
+                value1 := values(to_integer(unsigned(sources1(i)(4 downto 0))));
+              ELSE
+                value1 := to_integer(unsigned(sources1(i)(1 downto 0)));
+              END IF;
+
+              IF sources2(i)(5) = '0' THEN
+                value2 := values(to_integer(unsigned(sources2(i)(4 downto 0))));
+              ELSE
+                value2 := to_integer(unsigned(sources2(i)(1 downto 0)));
+              END IF;
+              IF to_integer(unsigned(operations(i))) = 1 THEN
+                values(to_integer(unsigned(destinations(i)(4 downto 0)))) := value1 + value2;
+              ELSIF to_integer(unsigned(operations(i))) = 2 THEN
+                values(to_integer(unsigned(destinations(i)(4 downto 0)))) := value1 - value2;
+              ELSIF to_integer(unsigned(operations(i))) = 3 THEN
+                values(to_integer(unsigned(destinations(i)(4 downto 0)))) := value1 * value2;
+              ELSIF to_integer(unsigned(operations(i))) = 4 THEN
+                values(to_integer(unsigned(destinations(i)(4 downto 0)))) := value1 / value2;
+              ELSIF to_integer(unsigned(operations(i))) = 5 THEN
+                values(to_integer(unsigned(destinations(i)(4 downto 0)))) := value1 mod value2;
+              END IF;
+              IF values(to_integer(unsigned(destinations(i)(4 downto 0)))) = 0 THEN
+                signals(3) <= '1';
+              ELSIF values(to_integer(unsigned(destinations(i)(4 downto 0)))) > 0 THEN
+                signals(2) <= '1';
+              ELSIF values(to_integer(unsigned(destinations(i)(4 downto 0)))) < -3 THEN
+                signals(1) <= '1';
+              ELSIF values(to_integer(unsigned(destinations(i)(4 downto 0)))) > 3 THEN
+                signals(0) <= '1';
+              END IF;
             END IF;
+          ELSIF decoded(i) = '1' AND executed(i) ='0' THEN
+            stage(3) <= '1';
+            stalled(3) := '1';
           END IF;
 
           IF fetched(i) = '1' AND decoded(i) = '0' AND DECODE = '0' THEN
@@ -219,6 +225,11 @@ ARCHITECTURE behaviorial OF computer IS
             END IF;
           END IF;
 
+          IF fetched(i) = '1' AND decoded(i) = '0' AND DECODE = '1' THEN
+            stage(4) <= '1';
+            stalled(4) := '1';
+          END IF;
+
           IF fetched(i) = '0' AND FETCH = '0' THEN
             fetched(i) := '1';
             FETCH := '1';
@@ -227,11 +238,12 @@ ARCHITECTURE behaviorial OF computer IS
 
         END LOOP;
         PC := PC + 1;
-
         pc_out <= STD_LOGIC_VECTOR(to_unsigned(PC, 4));
 
         wait for 1 ns;
         stage <= stalled;
+        signals <= STD_LOGIC_VECTOR(to_unsigned(0, 4));
+        pc_out <= STD_LOGIC_VECTOR(to_unsigned(0, 4));
         wait for 1 ns;
         stalled := (others => '0');
 
