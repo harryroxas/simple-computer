@@ -35,7 +35,7 @@ ARCHITECTURE behaviorial OF computer IS
 
   BEGIN
     PROCESS
-      FILE in_file : TEXT OPEN READ_MODE IS "input/1.txt"; -- Change filename here
+      FILE in_file : TEXT OPEN READ_MODE IS "input/file-bits.txt"; -- Change filename here
       VARIABLE in_line : LINE; -- Current line
       VARIABLE count : INTEGER := 0; -- Number of instructions from text file
       VARIABLE instructions : INSTRUCTION; -- Array of instructions
