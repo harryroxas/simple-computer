@@ -164,16 +164,19 @@ ARCHITECTURE behaviorial OF computer IS
                 values(to_integer(unsigned(destinations(i)(4 downto 0)))) := values(to_integer(unsigned(sources1(i)(4 downto 0))));
               ELSE
                 -- Source is an immediate value
-                values(to_integer(unsigned(destinations(i)(4 downto 0)))) := to_integer(unsigned(sources1(i)(1 downto 0)));
+                values(to_integer(unsigned(destinations(i)(4 downto 0)))) := to_integer(unsigned(sources1(i)(4 downto 0)));
               END IF;
 
               IF values(to_integer(unsigned(destinations(i)(4 downto 0)))) = 0 THEN
                 signals(3) <= '1'; -- Set zero flag
-              ELSIF values(to_integer(unsigned(destinations(i)(4 downto 0)))) > 0 THEN
+              END IF;
+              IF values(to_integer(unsigned(destinations(i)(4 downto 0)))) > 0 THEN
                 signals(2) <= '1'; -- Set sign flag
-              ELSIF values(to_integer(unsigned(destinations(i)(4 downto 0)))) < -3 THEN
+              END IF;
+              IF values(to_integer(unsigned(destinations(i)(4 downto 0)))) < -3 THEN
                 signals(1) <= '1'; -- Set underflow flag
-              ELSIF values(to_integer(unsigned(destinations(i)(4 downto 0)))) > 3 THEN
+              END IF;
+              IF values(to_integer(unsigned(destinations(i)(4 downto 0)))) > 3 THEN
                 signals(0) <= '1'; -- Set overflow flag
               END IF;
             
@@ -215,13 +218,16 @@ ARCHITECTURE behaviorial OF computer IS
 
               -- Check flags again and set the necessary ones
               IF values(to_integer(unsigned(destinations(i)(4 downto 0)))) = 0 THEN
-                signals(3) <= '1';
-              ELSIF values(to_integer(unsigned(destinations(i)(4 downto 0)))) > 0 THEN
-                signals(2) <= '1';
-              ELSIF values(to_integer(unsigned(destinations(i)(4 downto 0)))) < -3 THEN
-                signals(1) <= '1';
-              ELSIF values(to_integer(unsigned(destinations(i)(4 downto 0)))) > 3 THEN
-                signals(0) <= '1';
+                signals(3) <= '1'; -- Set zero flag
+              END IF;
+              IF values(to_integer(unsigned(destinations(i)(4 downto 0)))) > 0 THEN
+                signals(2) <= '1'; -- Set sign flag
+              END IF;
+              IF values(to_integer(unsigned(destinations(i)(4 downto 0)))) < -3 THEN
+                signals(1) <= '1'; -- Set underflow flag
+              END IF;
+              IF values(to_integer(unsigned(destinations(i)(4 downto 0)))) > 3 THEN
+                signals(0) <= '1'; -- Set overflow flag
               END IF;
 
             END IF;
